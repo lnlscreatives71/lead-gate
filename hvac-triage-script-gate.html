@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HVAC Triage Script Library — LNL AI Agency</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0f1e;
+    --card:      #111827;
+    --card2:     #1a2035;
+    --border:    #1e293b;
+    --cyan:      #00e5ff;
+    --cyan-glow: rgba(0,229,255,0.15);
+    --purple:    #a855f7;
+    --purple-dim:#7c3aed;
+    --green:     #10b981;
+    --red:       #ef4444;
+    --amber:     #f59e0b;
+    --white:     #f1f5f9;
+    --gray:      #64748b;
+    --gray-lt:   #94a3b8;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: var(--sans);
+    color: var(--white);
+    padding: 1.5rem;
+  }
+
+  .wrap { max-width: 780px; margin: 0 auto; }
+
+  /* ── PREVIEW CARD ── */
+  .preview-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Top label bar */
+  .top-bar {
+    background: var(--purple);
+    padding: 0.5rem 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .top-bar-left {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: white;
+    text-transform: uppercase;
+  }
+  .top-bar-right {
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    color: rgba(255,255,255,0.7);
+  }
+
+  /* Preview content area */
+  .preview-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+  @media (max-width: 580px) {
+    .preview-body { grid-template-columns: 1fr; }
+  }
+
+  /* Left — cover mockup */
+  .preview-cover {
+    background: linear-gradient(160deg, #0f1729 0%, #1a0a2e 100%);
+    padding: 1.8rem 1.4rem;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .preview-cover::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(168,85,247,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .preview-cover::after {
+    content: '';
+    position: absolute;
+    bottom: -20px; left: -20px;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, rgba(0,229,255,0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .cover-tag {
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    letter-spacing: 0.18em;
+    color: var(--cyan);
+    text-transform: uppercase;
+  }
+  .cover-title {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 1.3rem;
+    line-height: 1.2;
+    color: var(--white);
+  }
+  .cover-title span { color: var(--cyan); }
+  .cover-flows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-top: 0.2rem;
+  }
+  .cover-flow-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+  }
+  .flow-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .flow-dot.red    { background: var(--red);    box-shadow: 0 0 6px var(--red); }
+  .flow-dot.amber  { background: var(--amber);  box-shadow: 0 0 6px var(--amber); }
+  .flow-dot.green  { background: var(--green);  box-shadow: 0 0 6px var(--green); }
+  .flow-dot.cyan   { background: var(--cyan);   box-shadow: 0 0 6px var(--cyan); }
+  .flow-dot.purple { background: var(--purple); box-shadow: 0 0 6px var(--purple); }
+  .flow-dot.gray   { background: var(--gray); }
+  .flow-name { color: var(--gray-lt); }
+  .flow-badge {
+    margin-left: auto;
+    font-size: 0.5rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+  }
+  .flow-badge.safety {
+    background: rgba(239,68,68,0.15);
+    color: var(--red);
+    border: 1px solid rgba(239,68,68,0.25);
+  }
+  .flow-badge.included {
+    background: rgba(16,185,129,0.1);
+    color: var(--green);
+    border: 1px solid rgba(16,185,129,0.2);
+  }
+
+  /* Right — blurred preview of content */
+  .preview-peek {
+    padding: 1.4rem 1.2rem;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .peek-label {
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    color: var(--gray);
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
+  }
+
+  /* Fake script lines */
+  .script-block {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.6rem 0.8rem;
+    position: relative;
+  }
+  .script-block.blurred {
+    filter: blur(3.5px);
+    user-select: none;
+    pointer-events: none;
+    opacity: 0.7;
+  }
+  .script-speaker {
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    font-weight: 700;
+    color: var(--cyan);
+    margin-bottom: 0.3rem;
+  }
+  .script-text {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--white);
+    line-height: 1.45;
+  }
+  .branch-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    background: var(--card2);
+    border-radius: 5px;
+    border-left: 2px solid var(--amber);
+  }
+  .branch-line.blurred {
+    filter: blur(3.5px);
+    user-select: none;
+    pointer-events: none;
+    opacity: 0.7;
+  }
+  .branch-if {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--amber);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .branch-then {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--green);
+    line-height: 1.4;
+  }
+
+  /* Fade overlay on right side */
+  .peek-fade {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 60%;
+    background: linear-gradient(to bottom, transparent 0%, var(--card) 100%);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* Unlock prompt */
+  .unlock-prompt {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 0.8rem 1.4rem;
+    gap: 0.3rem;
+    text-align: center;
+  }
+  .unlock-icon { font-size: 1.3rem; margin-bottom: 0.1rem; }
+  .unlock-label {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    color: var(--gray-lt);
+    text-transform: uppercase;
+  }
+  .unlock-title {
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1.3;
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0;
+  }
+
+  /* ── GATE FORM ── */
+  .gate-section {
+    padding: 1.6rem 1.4rem;
+    background: var(--card2);
+  }
+  .gate-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+  }
+  .gate-icon-wrap {
+    width: 42px; height: 42px;
+    background: rgba(0,229,255,0.08);
+    border: 1px solid rgba(0,229,255,0.2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+  .gate-header-text .gate-title {
+    font-family: var(--sans);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 0.25rem;
+    line-height: 1.3;
+  }
+  .gate-header-text .gate-sub {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--gray-lt);
+    line-height: 1.5;
+  }
+
+  /* What's inside pills */
+  .inside-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1.2rem;
+  }
+  .pill {
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    padding: 0.25rem 0.65rem;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .pill-cyan   { background: rgba(0,229,255,0.1);   color: var(--cyan);   border: 1px solid rgba(0,229,255,0.2); }
+  .pill-purple { background: rgba(168,85,247,0.1); color: var(--purple); border: 1px solid rgba(168,85,247,0.2); }
+  .pill-green  { background: rgba(16,185,129,0.1); color: var(--green);  border: 1px solid rgba(16,185,129,0.2); }
+  .pill-amber  { background: rgba(245,158,11,0.1); color: var(--amber);  border: 1px solid rgba(245,158,11,0.2); }
+
+  /* Form */
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.7rem;
+    margin-bottom: 0.7rem;
+  }
+  @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .form-field label {
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.1em;
+    color: var(--gray-lt);
+    text-transform: uppercase;
+  }
+  .form-field input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.55rem 0.8rem;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--white);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+  .form-field input:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 2px rgba(0,229,255,0.1);
+  }
+  .form-field input::placeholder { color: var(--gray); }
+  .form-field input.error { border-color: var(--red); }
+
+  .form-full { grid-column: 1 / -1; }
+
+  .submit-btn {
+    width: 100%;
+    background: var(--cyan);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    padding: 0.8rem 1.5rem;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+    margin-top: 0.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  .submit-btn:hover {
+    background: #00c8e0;
+    box-shadow: 0 0 20px rgba(0,229,255,0.35);
+  }
+  .submit-btn:active { transform: scale(0.98); }
+  .submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .error-msg {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    color: var(--red);
+    margin-top: 0.2rem;
+    display: none;
+  }
+
+  .privacy-note {
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    color: var(--gray);
+    text-align: center;
+    margin-top: 0.7rem;
+    line-height: 1.5;
+  }
+  .privacy-note a { color: var(--gray-lt); text-decoration: underline; }
+
+  /* ── SUCCESS STATE ── */
+  .success-state {
+    display: none;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.8rem;
+    background: var(--card2);
+  }
+  .success-icon {
+    width: 56px; height: 56px;
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin: 0 auto;
+  }
+  .success-title {
+    font-family: var(--sans);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--white);
+  }
+  .success-sub {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--gray-lt);
+    line-height: 1.6;
+    max-width: 380px;
+  }
+  .download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--green);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.8rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+    margin-top: 0.3rem;
+  }
+  .download-btn:hover {
+    background: #0d9e73;
+    box-shadow: 0 0 18px rgba(16,185,129,0.35);
+  }
+  .cta-nudge {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    color: var(--gray);
+    margin-top: 0.3rem;
+  }
+  .cta-nudge a {
+    color: var(--cyan);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .cta-nudge a:hover { text-decoration: underline; }
+
+  /* ── LOADING SPINNER ── */
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(10,15,30,0.3);
+    border-top: 2px solid var(--bg);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .preview-card { animation: fadeUp 0.4s ease both; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="preview-card">
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="top-bar-left">LNL AI Agency // Free Download</div>
+    <div class="top-bar-right">PDF · 9 Flows · Instant Access</div>
+  </div>
+
+  <!-- PREVIEW BODY -->
+  <div class="preview-body">
+
+    <!-- LEFT: Cover Mockup -->
+    <div class="preview-cover">
+      <div class="cover-tag">HVAC AI Dispatch</div>
+      <div class="cover-title">Triage Script<br><span>Library</span></div>
+      <div class="cover-flows">
+        <div class="cover-flow-item">
+          <div class="flow-dot red"></div>
+          <span class="flow-name">Flow 1 — No-Heat Emergency</span>
+          <span class="flow-badge safety">Safety</span>
+        </div>
+        <div class="cover-flow-item">
+          <div class="flow-dot red"></div>
+          <span class="flow-name">Flow 2 — Gas Smell</span>
+          <span class="flow-badge safety">Safety</span>
+        </div>
+        <div class="cover-flow-item">
+          <div class="flow-dot amber"></div>
+          <span class="flow-name">Flow 3 — Frozen Coil</span>
+          <span class="flow-badge included">Included</span>
+        </div>
+        <div class="cover-flow-item">
+          <div class="flow-dot gray"></div>
+          <span class="flow-name">Flow 4 — After-Hours</span>
+          <span class="flow-badge included">Included</span>
+        </div>
+        <div class="cover-flow-item">
+          <div class="flow-dot green"></div>
+          <span class="flow-name">Flow 5 — Warranty</span>
+          <span class="flow-badge included">Included</span>
+        </div>
+        <div class="cover-flow-item">
+          <div class="flow-dot purple"></div>
+          <span class="flow-name">Flow 6 — Second Opinion</span>
+          <span class="flow-badge included">Included</span>
+        </div>
+        <div class="cover-flow-item">
+          <div class="flow-dot cyan"></div>
+          <span class="flow-name">Flow 7 — Commercial</span>
+          <span class="flow-badge included">Included</span>
+        </div>
+        <div class="cover-flow-item">
+          <div class="flow-dot green"></div>
+          <span class="flow-name">Flow 8 — Maintenance Plan</span>
+          <span class="flow-badge included">Included</span>
+        </div>
+        <div class="cover-flow-item">
+          <div class="flow-dot amber"></div>
+          <span class="flow-name">Flow 9 — Recall Notice</span>
+          <span class="flow-badge included">Included</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Blurred preview peek -->
+    <div class="preview-peek">
+      <div class="peek-label">Preview — Flow 1</div>
+
+      <div class="script-block">
+        <div class="script-speaker">AI</div>
+        <div class="script-text">Thank you for calling. I can help you get a technician out as quickly as possible. First — is anyone in the home experiencing headaches, dizziness, or an unusual smell?</div>
+      </div>
+
+      <div class="script-block blurred">
+        <div class="script-speaker">BRANCH IF</div>
+        <div class="script-text">Customer reports symptoms → HARD ESCALATE TO HUMAN. No appointment flow attempted.</div>
+      </div>
+
+      <div class="branch-line blurred">
+        <span class="branch-if">IF</span>
+        <span class="branch-then">Temperature below 45F inside → Flag VULNERABLE OCCUPANT risk. Escalate to on-call immediately.</span>
+      </div>
+
+      <div class="branch-line blurred">
+        <span class="branch-if">IF</span>
+        <span class="branch-then">No symptoms, gas furnace → Book emergency priority. Flag GAS FURNACE / NO HEAT in CRM job notes.</span>
+      </div>
+
+      <div class="script-block blurred">
+        <div class="script-speaker">HANDOFF TRIGGER</div>
+        <div class="script-text">Any safety symptom = immediate human escalation. No exceptions. Technician push notification on job creation.</div>
+      </div>
+
+      <div class="peek-fade"></div>
+      <div class="unlock-prompt">
+        <div class="unlock-icon">🔒</div>
+        <div class="unlock-label">Enter your email to unlock</div>
+        <div class="unlock-title">All 9 flows + full branching logic</div>
+      </div>
+    </div>
+
+  </div><!-- /preview-body -->
+
+  <div class="divider"></div>
+
+  <!-- GATE FORM -->
+  <div class="gate-section" id="gate-section">
+
+    <div class="gate-header">
+      <div class="gate-icon-wrap">📋</div>
+      <div class="gate-header-text">
+        <div class="gate-title">Get the Full HVAC Triage Script Library</div>
+        <div class="gate-sub">9 complete flows · Safety escalation logic · CRM handoff notes · Instant PDF download</div>
+      </div>
+    </div>
+
+    <div class="inside-pills">
+      <span class="pill pill-cyan">9 Triage Flows</span>
+      <span class="pill pill-purple">Branching Logic</span>
+      <span class="pill pill-green">Safety Protocols</span>
+      <span class="pill pill-amber">CRM Handoff Notes</span>
+      <span class="pill pill-cyan">Sample Transcripts</span>
+      <span class="pill pill-green">Free — No Credit Card</span>
+    </div>
+
+    <form id="gate-form" novalidate>
+      <div class="form-row">
+        <div class="form-field">
+          <label for="first-name">First Name</label>
+          <input type="text" id="first-name" placeholder="Your first name" autocomplete="given-name">
+          <div class="error-msg" id="err-first">Please enter your first name</div>
+        </div>
+        <div class="form-field">
+          <label for="last-name">Last Name</label>
+          <input type="text" id="last-name" placeholder="Your last name" autocomplete="family-name">
+          <div class="error-msg" id="err-last">Please enter your last name</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field form-full">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" placeholder="you@yourshop.com" autocomplete="email">
+          <div class="error-msg" id="err-email">Please enter a valid email address</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field form-full">
+          <label for="company">Shop / Company Name <span style="color:var(--gray)">(optional)</span></label>
+          <input type="text" id="company" placeholder="Your HVAC company name" autocomplete="organization">
+        </div>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submit-btn">
+        <span id="btn-text">Download Free Script Library →</span>
+        <div class="spinner" id="spinner"></div>
+      </button>
+    </form>
+
+    <div class="privacy-note">
+      No spam. Your email is used to send the download link and occasional LNL AI Agency updates on AI automation for HVAC contractors. Unsubscribe any time.<br>
+      <a href="https://lnlaiagency.com" target="_blank">lnlaiagency.com</a>
+    </div>
+
+  </div>
+
+  <!-- SUCCESS STATE (hidden until form submit) -->
+  <div class="success-state" id="success-state">
+    <div class="success-icon">✓</div>
+    <div class="success-title">Your script library is ready.</div>
+    <div class="success-sub">
+      Click below to download all 9 HVAC AI dispatch triage flows with full branching logic, safety escalation protocols, and CRM handoff notes.
+    </div>
+    <a class="download-btn" id="download-link" href="#" download="LNL-HVAC-Triage-Script-Library.pdf">
+      ↓ Download PDF Now
+    </a>
+    <div class="cta-nudge">
+      Before you automate dispatch — know how customers find you.<br>
+      <a href="https://booking.appointy.com/lnlaiagency" target="_blank">Book your Complimentary HVAC Visibility Audit →</a>
+    </div>
+  </div>
+
+</div><!-- /preview-card -->
+</div><!-- /wrap -->
+
+<script>
+// ── CONFIGURATION ────────────────────────────────────────────────────────────
+// Replace PDF_URL with the actual Vercel-hosted URL of the PDF once uploaded
+const PDF_URL = 'https://drive.google.com/uc?export=download&id=12OxXltJg7meHBncK4d5ZAEmVor2QR-B3';
+
+// Replace with your actual form submission endpoint
+// Options:
+//   HubSpot form API: 'https://api.hsforms.com/submissions/v3/integration/submit/{portalId}/{formId}'
+//   Zapier webhook:   'https://hooks.zapier.com/hooks/catch/XXXXX/XXXXXX/'
+//   n8n webhook:      'https://your-n8n-instance.com/webhook/XXXXX'
+//   Simple fallback:  Leave as '' to skip CRM submission and go straight to download
+const FORM_ENDPOINT = 'https://lnlcrm.com/api/webhooks/leads';
+
+// ── FORM LOGIC ───────────────────────────────────────────────────────────────
+const form       = document.getElementById('gate-form');
+const gateSection = document.getElementById('gate-section');
+const successState = document.getElementById('success-state');
+const submitBtn  = document.getElementById('submit-btn');
+const btnText    = document.getElementById('btn-text');
+const spinner    = document.getElementById('spinner');
+const dlLink     = document.getElementById('download-link');
+
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function showError(fieldId, errId, show) {
+  const field = document.getElementById(fieldId);
+  const err   = document.getElementById(errId);
+  if (show) {
+    field.classList.add('error');
+    err.style.display = 'block';
+  } else {
+    field.classList.remove('error');
+    err.style.display = 'none';
+  }
+}
+
+function setLoading(loading) {
+  submitBtn.disabled = loading;
+  btnText.style.display = loading ? 'none' : 'flex';
+  spinner.style.display  = loading ? 'block' : 'none';
+}
+
+function showSuccess() {
+  dlLink.href = PDF_URL;
+  gateSection.style.display = 'none';
+  successState.style.display = 'flex';
+  successState.style.animation = 'fadeUp 0.4s ease both';
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const firstName = document.getElementById('first-name').value.trim();
+  const lastName  = document.getElementById('last-name').value.trim();
+  const email     = document.getElementById('email').value.trim();
+  const company   = document.getElementById('company').value.trim();
+
+  // Validate
+  let hasError = false;
+  if (!firstName) { showError('first-name', 'err-first', true); hasError = true; }
+  else             { showError('first-name', 'err-first', false); }
+
+  if (!lastName)  { showError('last-name',  'err-last',  true); hasError = true; }
+  else             { showError('last-name',  'err-last',  false); }
+
+  if (!validateEmail(email)) { showError('email', 'err-email', true); hasError = true; }
+  else                        { showError('email', 'err-email', false); }
+
+  if (hasError) return;
+
+  setLoading(true);
+
+  // Submit to endpoint if configured
+  if (FORM_ENDPOINT) {
+    try {
+      const payload = {
+        firstName, lastName, email, company,
+        source: 'hvac-triage-script-library',
+        page: window.location.href,
+        timestamp: new Date().toISOString()
+      };
+
+      await fetch(FORM_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (err) {
+      // Silent fail — don't block the download if the endpoint errors
+      console.warn('Form submission error:', err);
+    }
+  }
+
+  // Small delay for UX feel, then show success
+  setTimeout(() => {
+    setLoading(false);
+    showSuccess();
+  }, FORM_ENDPOINT ? 800 : 400);
+});
+
+// Clear error on input
+['first-name', 'last-name', 'email'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    const errMap = { 'first-name': 'err-first', 'last-name': 'err-last', 'email': 'err-email' };
+    showError(id, errMap[id], false);
+  });
+});
+</script>
+</body>
+</html>
